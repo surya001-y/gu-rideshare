@@ -1,4 +1,5 @@
 require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -7,89 +8,292 @@ const cors = require('cors');
 
 const app = express();
 const server = http.createServer(app);
+
+// =====================================================
+// CONFIGURATION
+// =====================================================
+
+const PORT = process.env.PORT || 5000;
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
+
+// =====================================================
+// CORS
+// =====================================================
+
+const corsOptions = {
+  origin: CLIENT_URL,
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.use(express.json());
+
+// =====================================================
+// SOCKET.IO
+// =====================================================
+
 const io = new Server(server, {
-  cors: { origin: process.env.CLIENT_URL || 'http://localhost:3000', credentials: true },
+  cors: {
+    origin: CLIENT_URL,
+    credentials: true,
+  },
 });
 
-// ── Middleware ────────────────────────────────────────────────────────────────
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', credentials: true }));
-app.use(express.json());
-app.set('io', io); // Share socket instance with routes
+app.set('io', io);
 
-// ── Database ──────────────────────────────────────────────────────────────────
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB connected'))
-  .catch(err => console.error('❌ MongoDB error:', err));
+// =====================================================
+// MONGODB
+// =====================================================
 
-// ── Routes ────────────────────────────────────────────────────────────────────
+if (!process.env.MONGODB_URI) {
+  console.error('❌ MONGODB_URI is missing in .env file');
+} else {
+  mongoose
+    .connect(process.env.MONGODB_URI)
+    .then(() => {
+      console.log('✅ MongoDB connected successfully');
+    })
+    .catch((err) => {
+      console.error('❌ MongoDB connection error:', err.message);
+    });
+}
+
+// =====================================================
+// ROUTES
+// =====================================================
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/rides', require('./routes/rides'));
-const { messagesRouter, ratingsRouter } = require('./routes/messages');
+
+const {
+  messagesRouter,
+  ratingsRouter,
+} = require('./routes/messages');
+
 app.use('/api/messages', messagesRouter);
 app.use('/api/ratings', ratingsRouter);
 
-// Health check
-app.get('/health', (_, res) => res.json({ status: 'ok', app: 'GU RideShare API' }));
+// =====================================================
+// HEALTH CHECK
+// =====================================================
 
-// 404 handler
-app.use((_, res) => res.status(404).json({ error: 'Route not found' }));
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: 'Internal server error' });
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    app: 'GU RideShare API',
+    message: 'Backend is running successfully',
+  });
 });
 
-// ── Socket.io — Real-time chat + location ─────────────────────────────────────
-const connectedUsers = new Map(); // userId → socketId
+// =====================================================
+// ROOT ROUTE
+// =====================================================
+
+app.get('/', (req, res) => {
+  res.json({
+    message: 'GU RideShare Backend API',
+    status: 'running',
+  });
+});
+
+// =====================================================
+// 404 HANDLER
+// =====================================================
+
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Route not found',
+    path: req.originalUrl,
+  });
+});
+
+// =====================================================
+// ERROR HANDLER
+// =====================================================
+
+app.use((err, req, res, next) => {
+  console.error('❌ Server error:', err);
+
+  res.status(500).json({
+    error: 'Internal server error',
+  });
+});
+
+// =====================================================
+// SOCKET.IO EVENTS
+// =====================================================
+
+const connectedUsers = new Map();
+
+// -----------------------------------------------------
+// Socket connection
+// -----------------------------------------------------
 
 io.on('connection', (socket) => {
-  console.log('Socket connected:', socket.id);
+  console.log('🔌 Socket connected:', socket.id);
 
+  // ---------------------------------------------------
   // Register user
+  // ---------------------------------------------------
+
   socket.on('register', (userId) => {
-    connectedUsers.set(userId, socket.id);
-    socket.join(userId);
-    console.log(`User ${userId} registered on socket ${socket.id}`);
+    if (!userId) {
+      return;
+    }
+
+    connectedUsers.set(String(userId), socket.id);
+
+    socket.join(String(userId));
+
+    console.log(
+      `👤 User ${userId} registered on socket ${socket.id}`
+    );
   });
 
+  // ---------------------------------------------------
   // Send message
+  // ---------------------------------------------------
+
   socket.on('send_message', (data) => {
-    // data: { senderId, receiverId, text, rideId }
-    io.to(data.receiverId).emit('message', {
-      ...data,
+    if (!data) {
+      return;
+    }
+
+    const {
+      senderId,
+      receiverId,
+      text,
+      rideId,
+    } = data;
+
+    if (!receiverId || !text) {
+      return;
+    }
+
+    io.to(String(receiverId)).emit('message', {
+      senderId,
+      receiverId,
+      text,
+      rideId,
       time: new Date().toISOString(),
     });
   });
 
+  // ---------------------------------------------------
   // Driver location update
+  // ---------------------------------------------------
+
   socket.on('location_update', (data) => {
-    // data: { rideId, driverId, lat, lng }
-    // Emit to all passengers of this ride
-    socket.to(`ride_${data.rideId}`).emit('driver_location', {
-      lat: data.lat,
-      lng: data.lng,
-      timestamp: Date.now(),
-    });
+    if (!data) {
+      return;
+    }
+
+    const {
+      rideId,
+      driverId,
+      lat,
+      lng,
+    } = data;
+
+    if (!rideId || lat === undefined || lng === undefined) {
+      return;
+    }
+
+    socket
+      .to(`ride_${rideId}`)
+      .emit('driver_location', {
+        driverId,
+        lat,
+        lng,
+        timestamp: Date.now(),
+      });
   });
 
-  // Join a ride room (for tracking)
+  // ---------------------------------------------------
+  // Join ride room
+  // ---------------------------------------------------
+
   socket.on('join_ride_room', (rideId) => {
+    if (!rideId) {
+      return;
+    }
+
     socket.join(`ride_${rideId}`);
+
+    console.log(
+      `🚗 Socket ${socket.id} joined ride_${rideId}`
+    );
   });
+
+  // ---------------------------------------------------
+  // Leave ride room
+  // ---------------------------------------------------
+
+  socket.on('leave_ride_room', (rideId) => {
+    if (!rideId) {
+      return;
+    }
+
+    socket.leave(`ride_${rideId}`);
+
+    console.log(
+      `🚪 Socket ${socket.id} left ride_${rideId}`
+    );
+  });
+
+  // ---------------------------------------------------
+  // Disconnect
+  // ---------------------------------------------------
 
   socket.on('disconnect', () => {
-    for (const [uid, sid] of connectedUsers.entries()) {
-      if (sid === socket.id) { connectedUsers.delete(uid); break; }
+    for (const [userId, socketId] of connectedUsers.entries()) {
+      if (socketId === socket.id) {
+        connectedUsers.delete(userId);
+
+        console.log(
+          `👋 User ${userId} disconnected`
+        );
+
+        break;
+      }
     }
-    console.log('Socket disconnected:', socket.id);
+
+    console.log(
+      '🔌 Socket disconnected:',
+      socket.id
+    );
   });
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
+// =====================================================
+// START SERVER
+// =====================================================
+
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(
+      `❌ Port ${PORT} is already being used.`
+    );
+
+    console.error(
+      `👉 Stop the existing Node.js server and run again.`
+    );
+
+    process.exit(1);
+  }
+
+  console.error('❌ Server error:', error);
+});
+
 server.listen(PORT, () => {
-  console.log(`\n🚀 GU RideShare API running on port ${PORT}`);
-  console.log(`   Health: http://localhost:${PORT}/health`);
-  console.log(`   Mode:   ${process.env.NODE_ENV || 'development'}\n`);
+  console.log('');
+  console.log('========================================');
+  console.log('🚀 GU RideShare API running');
+  console.log('========================================');
+  console.log(`📡 Port: ${PORT}`);
+  console.log(`🌐 Client URL: ${CLIENT_URL}`);
+  console.log(`❤️ Health: http://localhost:${PORT}/health`);
+  console.log(`🔌 Socket.IO: Enabled`);
+  console.log('========================================');
+  console.log('');
 });

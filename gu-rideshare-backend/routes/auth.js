@@ -3,94 +3,412 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const { User } = require('../models');
 
-const genOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+// ─────────────────────────────────────────────
+// Generate 6 Digit OTP
+// ─────────────────────────────────────────────
+
+const genOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// ─────────────────────────────────────────────
+// Validate Email
+// ANY valid email domain is allowed
+// Gmail, Yahoo, Outlook, GU, etc.
+// ─────────────────────────────────────────────
+
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+// ─────────────────────────────────────────────
+// Send OTP Email
+// ─────────────────────────────────────────────
 
 const sendMail = async (to, otp) => {
   const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
-    port: +process.env.EMAIL_PORT,
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+    port: Number(process.env.EMAIL_PORT) || 587,
+    secure: Number(process.env.EMAIL_PORT) === 465,
+
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
   });
+
   await transporter.sendMail({
     from: `"GU RideShare" <${process.env.EMAIL_USER}>`,
+
     to,
-    subject: 'Your GU RideShare OTP',
+
+    subject: 'Your GU RideShare Verification OTP',
+
     html: `
-      <div style="font-family:sans-serif;max-width:400px;margin:auto;padding:24px;background:#0f172a;color:#f1f5f9;border-radius:12px">
-        <h2 style="color:#f97316;margin:0 0 12px">GU RideShare</h2>
-        <p style="color:#94a3b8;margin:0 0 20px">Your verification code is:</p>
-        <div style="background:#1e293b;border-radius:8px;padding:20px;text-align:center;letter-spacing:10px;font-size:32px;font-weight:700;color:#f97316">${otp}</div>
-        <p style="color:#64748b;font-size:12px;margin-top:20px">Expires in 10 minutes. Do not share with anyone.</p>
-      </div>`,
+      <!DOCTYPE html>
+
+      <html>
+
+      <head>
+        <meta charset="UTF-8">
+        <title>GU RideShare OTP</title>
+      </head>
+
+      <body
+        style="
+          margin:0;
+          padding:0;
+          background:#0f172a;
+          font-family:Arial,sans-serif;
+        "
+      >
+
+        <div
+          style="
+            max-width:420px;
+            margin:40px auto;
+            padding:30px;
+            background:#111827;
+            color:#f1f5f9;
+            border-radius:16px;
+          "
+        >
+
+          <h1
+            style="
+              margin:0 0 10px;
+              color:#f97316;
+              font-size:26px;
+            "
+          >
+            GU RideShare
+          </h1>
+
+          <p
+            style="
+              color:#94a3b8;
+              font-size:14px;
+              margin-bottom:25px;
+            "
+          >
+            Verify your email address to continue.
+          </p>
+
+          <div
+            style="
+              background:#1e293b;
+              border-radius:12px;
+              padding:22px;
+              text-align:center;
+            "
+          >
+
+            <p
+              style="
+                margin:0 0 10px;
+                color:#94a3b8;
+                font-size:13px;
+              "
+            >
+              Your verification code
+            </p>
+
+            <div
+              style="
+                font-size:34px;
+                font-weight:bold;
+                letter-spacing:10px;
+                color:#f97316;
+              "
+            >
+              ${otp}
+            </div>
+
+          </div>
+
+          <p
+            style="
+              color:#64748b;
+              font-size:12px;
+              margin-top:22px;
+              line-height:1.5;
+            "
+          >
+            This OTP will expire in 10 minutes.
+            Do not share this code with anyone.
+          </p>
+
+          <p
+            style="
+              color:#64748b;
+              font-size:12px;
+              margin-top:20px;
+            "
+          >
+            GU RideShare
+          </p>
+
+        </div>
+
+      </body>
+      </html>
+    `,
   });
 };
 
+// ─────────────────────────────────────────────
 // POST /api/auth/register
+// ─────────────────────────────────────────────
+
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, phone, year } = req.body;
-    if (!email.endsWith('@galgotiasuniversity.edu.in'))
-      return res.status(400).json({ error: 'Must use a GU email address' });
+    let { name, email, phone, year } = req.body;
 
-    let user = await User.findOne({ email });
+    // Required fields
+    if (!name || !email || !phone || !year) {
+      return res.status(400).json({
+        error: 'Name, email, phone and year are required',
+      });
+    }
+
+    // Normalize email
+    email = email.trim().toLowerCase();
+
+    // ONLY email format validation
+    // NO GU EMAIL RESTRICTION
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        error: 'Please enter a valid email address',
+      });
+    }
+
+    // Generate OTP
     const otp = genOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+    // OTP expires in 10 minutes
+    const expiresAt = new Date(
+      Date.now() + 10 * 60 * 1000
+    );
+
+    // Find existing user
+    let user = await User.findOne({ email });
 
     if (user) {
-      user.otp = { code: otp, expiresAt };
+      user.name = name.trim();
+      user.phone = phone.trim();
+      user.year = year;
+
+      user.otp = {
+        code: otp,
+        expiresAt,
+      };
+
+      user.verified = false;
     } else {
-      user = new User({ name, email, phone, year, otp: { code: otp, expiresAt } });
+      user = new User({
+        name: name.trim(),
+        email,
+        phone: phone.trim(),
+        year,
+
+        verified: false,
+
+        otp: {
+          code: otp,
+          expiresAt,
+        },
+      });
     }
+
+    // Save user
     await user.save();
+
+    // Send OTP
     await sendMail(email, otp);
-    res.json({ message: 'OTP sent to your GU email' });
+
+    return res.json({
+      success: true,
+      message: 'OTP sent successfully to your email',
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Register error:', err);
+
+    return res.status(500).json({
+      error: err.message || 'Unable to send OTP. Please try again.',
+    });
   }
 });
 
+// ─────────────────────────────────────────────
 // POST /api/auth/verify-otp
+// ─────────────────────────────────────────────
+
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { email, otp } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if (!user.otp?.code || user.otp.code !== otp)
-      return res.status(400).json({ error: 'Invalid OTP' });
-    if (new Date() > user.otp.expiresAt)
-      return res.status(400).json({ error: 'OTP expired. Request a new one.' });
+    let { email, otp } = req.body;
 
+    if (!email || !otp) {
+      return res.status(400).json({
+        error: 'Email and OTP are required',
+      });
+    }
+
+    email = email.trim().toLowerCase();
+    otp = otp.toString().trim();
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found. Please register first.',
+      });
+    }
+
+    if (!user.otp || !user.otp.code) {
+      return res.status(400).json({
+        error: 'No OTP found. Please request a new OTP.',
+      });
+    }
+
+    if (user.otp.code !== otp) {
+      return res.status(400).json({
+        error: 'Invalid OTP. Please enter the correct OTP.',
+      });
+    }
+
+    if (
+      !user.otp.expiresAt ||
+      new Date() > user.otp.expiresAt
+    ) {
+      return res.status(400).json({
+        error: 'OTP expired. Please request a new OTP.',
+      });
+    }
+
+    // Verify user
     user.verified = true;
+
+    // Remove OTP
     user.otp = undefined;
+
     await user.save();
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, year: user.year, verified: user.verified } });
+    // Create JWT
+    const token = jwt.sign(
+      {
+        id: user._id.toString(),
+      },
+
+      process.env.JWT_SECRET,
+
+      {
+        expiresIn: process.env.JWT_EXPIRE || '7d',
+      }
+    );
+
+    return res.json({
+      success: true,
+
+      message: 'Email verified successfully',
+
+      token,
+
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        year: user.year,
+        verified: user.verified,
+      },
+    });
+
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('Verify OTP error:', err);
+
+    return res.status(500).json({
+      error: 'Unable to verify OTP. Please try again.',
+    });
   }
 });
 
+// ─────────────────────────────────────────────
 // POST /api/auth/resend-otp
+// ─────────────────────────────────────────────
+
 router.post('/resend-otp', async (req, res) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: 'Email is required',
+      });
+    }
+
+    email = email.trim().toLowerCase();
+
+    // ANY valid email
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        error: 'Please enter a valid email address',
+      });
+    }
+
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found. Please register first.',
+      });
+    }
+
+    // Generate new OTP
     const otp = genOTP();
-    user.otp = { code: otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) };
+
+    const expiresAt = new Date(
+      Date.now() + 10 * 60 * 1000
+    );
+
+    user.otp = {
+      code: otp,
+      expiresAt,
+    };
+
     await user.save();
+
     await sendMail(email, otp);
-    res.json({ message: 'New OTP sent' });
-  } catch {
-    res.status(500).json({ error: 'Server error' });
+
+    return res.json({
+      success: true,
+      message: 'New OTP sent successfully',
+    });
+
+  } catch (err) {
+    console.error('Resend OTP error:', err);
+
+    return res.status(500).json({
+      error: 'Unable to resend OTP. Please try again.',
+    });
   }
 });
 
+// ─────────────────────────────────────────────
 // GET /api/auth/me
-router.get('/me', require('../middleware/auth'), (req, res) => {
-  res.json(req.user);
-});
+// ─────────────────────────────────────────────
+
+router.get(
+  '/me',
+  require('../middleware/auth'),
+  (req, res) => {
+    return res.json(req.user);
+  }
+);
+
+// ─────────────────────────────────────────────
+// Export
+// ─────────────────────────────────────────────
 
 module.exports = router;

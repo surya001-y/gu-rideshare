@@ -1,55 +1,51 @@
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { User } = require('../models');
 
-// ─────────────────────────────────────────────
+// ============================================
+// RESEND
+// ============================================
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// ============================================
 // Generate 6 Digit OTP
-// ─────────────────────────────────────────────
+// ============================================
 
 const genOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// ─────────────────────────────────────────────
+// ============================================
 // Validate Email
-// ANY valid email domain is allowed
-// Gmail, Yahoo, Outlook, GU, etc.
-// ─────────────────────────────────────────────
+// ============================================
 
 const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
 
-// ─────────────────────────────────────────────
-// Send OTP Email
-// ─────────────────────────────────────────────
+// ============================================
+// Send OTP Email using Resend
+// ============================================
 
 const sendMail = async (to, otp) => {
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: Number(process.env.EMAIL_PORT) || 587,
-    secure: Number(process.env.EMAIL_PORT) === 465,
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is missing');
+  }
 
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  const fromEmail =
+    process.env.EMAIL_FROM || 'GU RideShare <onboarding@resend.dev>';
 
-  await transporter.sendMail({
-    from: `"GU RideShare" <${process.env.EMAIL_USER}>`,
-
-    to,
-
+  const { data, error } = await resend.emails.send({
+    from: fromEmail,
+    to: [to],
     subject: 'Your GU RideShare Verification OTP',
 
     html: `
       <!DOCTYPE html>
-
       <html>
-
       <head>
         <meta charset="UTF-8">
         <title>GU RideShare OTP</title>
@@ -155,11 +151,20 @@ const sendMail = async (to, otp) => {
       </html>
     `,
   });
+
+  if (error) {
+    console.error('❌ Resend email error:', error);
+    throw new Error(error.message || 'Unable to send email');
+  }
+
+  console.log('✅ OTP email sent:', data?.id);
+
+  return data;
 };
 
-// ─────────────────────────────────────────────
+// ============================================
 // POST /api/auth/register
-// ─────────────────────────────────────────────
+// ============================================
 
 router.post('/register', async (req, res) => {
   try {
@@ -175,8 +180,7 @@ router.post('/register', async (req, res) => {
     // Normalize email
     email = email.trim().toLowerCase();
 
-    // ONLY email format validation
-    // NO GU EMAIL RESTRICTION
+    // Validate email
     if (!isValidEmail(email)) {
       return res.status(400).json({
         error: 'Please enter a valid email address',
@@ -211,7 +215,6 @@ router.post('/register', async (req, res) => {
         email,
         phone: phone.trim(),
         year,
-
         verified: false,
 
         otp: {
@@ -224,6 +227,8 @@ router.post('/register', async (req, res) => {
     // Save user
     await user.save();
 
+    console.log(`📧 Sending OTP to: ${email}`);
+
     // Send OTP
     await sendMail(email, otp);
 
@@ -233,7 +238,7 @@ router.post('/register', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Register error:', err);
+    console.error('❌ Register error:', err);
 
     return res.status(500).json({
       error: err.message || 'Unable to send OTP. Please try again.',
@@ -241,9 +246,9 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
+// ============================================
 // POST /api/auth/verify-otp
-// ─────────────────────────────────────────────
+// ============================================
 
 router.post('/verify-otp', async (req, res) => {
   try {
@@ -300,9 +305,7 @@ router.post('/verify-otp', async (req, res) => {
       {
         id: user._id.toString(),
       },
-
       process.env.JWT_SECRET,
-
       {
         expiresIn: process.env.JWT_EXPIRE || '7d',
       }
@@ -310,7 +313,6 @@ router.post('/verify-otp', async (req, res) => {
 
     return res.json({
       success: true,
-
       message: 'Email verified successfully',
 
       token,
@@ -326,7 +328,7 @@ router.post('/verify-otp', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Verify OTP error:', err);
+    console.error('❌ Verify OTP error:', err);
 
     return res.status(500).json({
       error: 'Unable to verify OTP. Please try again.',
@@ -334,9 +336,9 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
+// ============================================
 // POST /api/auth/resend-otp
-// ─────────────────────────────────────────────
+// ============================================
 
 router.post('/resend-otp', async (req, res) => {
   try {
@@ -350,7 +352,6 @@ router.post('/resend-otp', async (req, res) => {
 
     email = email.trim().toLowerCase();
 
-    // ANY valid email
     if (!isValidEmail(email)) {
       return res.status(400).json({
         error: 'Please enter a valid email address',
@@ -379,6 +380,8 @@ router.post('/resend-otp', async (req, res) => {
 
     await user.save();
 
+    console.log(`📧 Resending OTP to: ${email}`);
+
     await sendMail(email, otp);
 
     return res.json({
@@ -387,17 +390,17 @@ router.post('/resend-otp', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Resend OTP error:', err);
+    console.error('❌ Resend OTP error:', err);
 
     return res.status(500).json({
-      error: 'Unable to resend OTP. Please try again.',
+      error: err.message || 'Unable to resend OTP. Please try again.',
     });
   }
 });
 
-// ─────────────────────────────────────────────
+// ============================================
 // GET /api/auth/me
-// ─────────────────────────────────────────────
+// ============================================
 
 router.get(
   '/me',
@@ -407,8 +410,8 @@ router.get(
   }
 );
 
-// ─────────────────────────────────────────────
-// Export
-// ─────────────────────────────────────────────
+// ============================================
+// EXPORT
+// ============================================
 
 module.exports = router;

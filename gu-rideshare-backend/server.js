@@ -14,18 +14,53 @@ const server = http.createServer(app);
 // =====================================================
 
 const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
+
+const CLIENT_URL =
+  process.env.CLIENT_URL || 'http://localhost:3000';
+
+// Allowed frontend URLs
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://gu-rideshare-rho.vercel.app',
+  'https://gu-rideshare-ad5808d-surya-ad54.vercel.app',
+  CLIENT_URL
+].filter(Boolean);
+
+// Remove duplicate URLs
+const uniqueOrigins = [...new Set(allowedOrigins)];
+
+console.log('🌐 Allowed Origins:', uniqueOrigins);
 
 // =====================================================
 // CORS
 // =====================================================
 
 const corsOptions = {
-  origin: CLIENT_URL,
-  credentials: true,
+  origin: function (origin, callback) {
+
+    // Allow requests without origin
+    // (Postman, server-to-server, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (uniqueOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.log('❌ CORS blocked origin:', origin);
+
+    return callback(
+      new Error(`CORS blocked: ${origin}`)
+    );
+  },
+
+  credentials: true
 };
 
 app.use(cors(corsOptions));
+
 app.use(express.json());
 
 // =====================================================
@@ -34,9 +69,9 @@ app.use(express.json());
 
 const io = new Server(server, {
   cors: {
-    origin: CLIENT_URL,
-    credentials: true,
-  },
+    origin: uniqueOrigins,
+    credentials: true
+  }
 });
 
 app.set('io', io);
@@ -46,15 +81,23 @@ app.set('io', io);
 // =====================================================
 
 if (!process.env.MONGODB_URI) {
-  console.error('❌ MONGODB_URI is missing in .env file');
+
+  console.error(
+    '❌ MONGODB_URI is missing in .env file'
+  );
+
 } else {
+
   mongoose
     .connect(process.env.MONGODB_URI)
     .then(() => {
       console.log('✅ MongoDB connected successfully');
     })
     .catch((err) => {
-      console.error('❌ MongoDB connection error:', err.message);
+      console.error(
+        '❌ MongoDB connection error:',
+        err.message
+      );
     });
 }
 
@@ -62,27 +105,48 @@ if (!process.env.MONGODB_URI) {
 // ROUTES
 // =====================================================
 
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/rides', require('./routes/rides'));
+app.use(
+  '/api/auth',
+  require('./routes/auth')
+);
+
+app.use(
+  '/api/rides',
+  require('./routes/rides')
+);
 
 const {
   messagesRouter,
-  ratingsRouter,
+  ratingsRouter
 } = require('./routes/messages');
 
-app.use('/api/messages', messagesRouter);
-app.use('/api/ratings', ratingsRouter);
+app.use(
+  '/api/messages',
+  messagesRouter
+);
+
+app.use(
+  '/api/ratings',
+  ratingsRouter
+);
 
 // =====================================================
 // HEALTH CHECK
 // =====================================================
 
 app.get('/health', (req, res) => {
+
   res.status(200).json({
+
     status: 'ok',
+
     app: 'GU RideShare API',
-    message: 'Backend is running successfully',
+
+    message:
+      'Backend is running successfully'
+
   });
+
 });
 
 // =====================================================
@@ -90,10 +154,16 @@ app.get('/health', (req, res) => {
 // =====================================================
 
 app.get('/', (req, res) => {
+
   res.json({
-    message: 'GU RideShare Backend API',
-    status: 'running',
+
+    message:
+      'GU RideShare Backend API',
+
+    status: 'running'
+
   });
+
 });
 
 // =====================================================
@@ -101,10 +171,15 @@ app.get('/', (req, res) => {
 // =====================================================
 
 app.use((req, res) => {
+
   res.status(404).json({
+
     error: 'Route not found',
-    path: req.originalUrl,
+
+    path: req.originalUrl
+
   });
+
 });
 
 // =====================================================
@@ -112,11 +187,19 @@ app.use((req, res) => {
 // =====================================================
 
 app.use((err, req, res, next) => {
-  console.error('❌ Server error:', err);
+
+  console.error(
+    '❌ Server error:',
+    err
+  );
 
   res.status(500).json({
-    error: 'Internal server error',
+
+    error:
+      'Internal server error'
+
   });
+
 });
 
 // =====================================================
@@ -125,29 +208,36 @@ app.use((err, req, res, next) => {
 
 const connectedUsers = new Map();
 
-// -----------------------------------------------------
-// Socket connection
-// -----------------------------------------------------
-
 io.on('connection', (socket) => {
-  console.log('🔌 Socket connected:', socket.id);
+
+  console.log(
+    '🔌 Socket connected:',
+    socket.id
+  );
 
   // ---------------------------------------------------
   // Register user
   // ---------------------------------------------------
 
   socket.on('register', (userId) => {
+
     if (!userId) {
       return;
     }
 
-    connectedUsers.set(String(userId), socket.id);
+    connectedUsers.set(
+      String(userId),
+      socket.id
+    );
 
-    socket.join(String(userId));
+    socket.join(
+      String(userId)
+    );
 
     console.log(
       `👤 User ${userId} registered on socket ${socket.id}`
     );
+
   });
 
   // ---------------------------------------------------
@@ -155,6 +245,7 @@ io.on('connection', (socket) => {
   // ---------------------------------------------------
 
   socket.on('send_message', (data) => {
+
     if (!data) {
       return;
     }
@@ -163,20 +254,27 @@ io.on('connection', (socket) => {
       senderId,
       receiverId,
       text,
-      rideId,
+      rideId
     } = data;
 
     if (!receiverId || !text) {
       return;
     }
 
-    io.to(String(receiverId)).emit('message', {
-      senderId,
-      receiverId,
-      text,
-      rideId,
-      time: new Date().toISOString(),
-    });
+    io
+      .to(String(receiverId))
+      .emit('message', {
+
+        senderId,
+        receiverId,
+        text,
+        rideId,
+
+        time:
+          new Date().toISOString()
+
+      });
+
   });
 
   // ---------------------------------------------------
@@ -184,6 +282,7 @@ io.on('connection', (socket) => {
   // ---------------------------------------------------
 
   socket.on('location_update', (data) => {
+
     if (!data) {
       return;
     }
@@ -192,21 +291,30 @@ io.on('connection', (socket) => {
       rideId,
       driverId,
       lat,
-      lng,
+      lng
     } = data;
 
-    if (!rideId || lat === undefined || lng === undefined) {
+    if (
+      !rideId ||
+      lat === undefined ||
+      lng === undefined
+    ) {
       return;
     }
 
     socket
       .to(`ride_${rideId}`)
       .emit('driver_location', {
+
         driverId,
         lat,
         lng,
-        timestamp: Date.now(),
+
+        timestamp:
+          Date.now()
+
       });
+
   });
 
   // ---------------------------------------------------
@@ -214,15 +322,19 @@ io.on('connection', (socket) => {
   // ---------------------------------------------------
 
   socket.on('join_ride_room', (rideId) => {
+
     if (!rideId) {
       return;
     }
 
-    socket.join(`ride_${rideId}`);
+    socket.join(
+      `ride_${rideId}`
+    );
 
     console.log(
       `🚗 Socket ${socket.id} joined ride_${rideId}`
     );
+
   });
 
   // ---------------------------------------------------
@@ -230,15 +342,19 @@ io.on('connection', (socket) => {
   // ---------------------------------------------------
 
   socket.on('leave_ride_room', (rideId) => {
+
     if (!rideId) {
       return;
     }
 
-    socket.leave(`ride_${rideId}`);
+    socket.leave(
+      `ride_${rideId}`
+    );
 
     console.log(
       `🚪 Socket ${socket.id} left ride_${rideId}`
     );
+
   });
 
   // ---------------------------------------------------
@@ -246,8 +362,14 @@ io.on('connection', (socket) => {
   // ---------------------------------------------------
 
   socket.on('disconnect', () => {
-    for (const [userId, socketId] of connectedUsers.entries()) {
+
+    for (
+      const [userId, socketId]
+      of connectedUsers.entries()
+    ) {
+
       if (socketId === socket.id) {
+
         connectedUsers.delete(userId);
 
         console.log(
@@ -256,13 +378,16 @@ io.on('connection', (socket) => {
 
         break;
       }
+
     }
 
     console.log(
       '🔌 Socket disconnected:',
       socket.id
     );
+
   });
+
 });
 
 // =====================================================
@@ -270,30 +395,63 @@ io.on('connection', (socket) => {
 // =====================================================
 
 server.on('error', (error) => {
+
   if (error.code === 'EADDRINUSE') {
+
     console.error(
       `❌ Port ${PORT} is already being used.`
     );
 
     console.error(
-      `👉 Stop the existing Node.js server and run again.`
+      '👉 Stop the existing Node.js server and run again.'
     );
 
     process.exit(1);
   }
 
-  console.error('❌ Server error:', error);
+  console.error(
+    '❌ Server error:',
+    error
+  );
+
 });
 
 server.listen(PORT, () => {
+
   console.log('');
-  console.log('========================================');
-  console.log('🚀 GU RideShare API running');
-  console.log('========================================');
-  console.log(`📡 Port: ${PORT}`);
-  console.log(`🌐 Client URL: ${CLIENT_URL}`);
-  console.log(`❤️ Health: http://localhost:${PORT}/health`);
-  console.log(`🔌 Socket.IO: Enabled`);
-  console.log('========================================');
+
+  console.log(
+    '========================================'
+  );
+
+  console.log(
+    '🚀 GU RideShare API running'
+  );
+
+  console.log(
+    '========================================'
+  );
+
+  console.log(
+    `📡 Port: ${PORT}`
+  );
+
+  console.log(
+    `🌐 Client URL: ${CLIENT_URL}`
+  );
+
+  console.log(
+    `❤️ Health: http://localhost:${PORT}/health`
+  );
+
+  console.log(
+    '🔌 Socket.IO: Enabled'
+  );
+
+  console.log(
+    '========================================'
+  );
+
   console.log('');
+
 });

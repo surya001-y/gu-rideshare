@@ -232,3 +232,255 @@ select.input-field option { background: var(--bg2); }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 0; }
+/* =========================================================
+   MOBILE RESPONSIVE FIX - GU RIDESHARE
+   ========================================================= */
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ---------- MOBILE ---------- */
+
+@media screen and (max-width: 768px) {
+
+  /* Prevent horizontal scrolling */
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden !important;
+  }
+
+  /* Main landing page container */
+  body {
+    min-width: 0 !important;
+  }
+
+  /* -----------------------------------------
+     HERO SECTION
+     ----------------------------------------- */
+
+  /* Desktop 2-column grid -> mobile 1-column */
+  div[style*="grid-template-columns"] {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 28px !important;
+    padding: 25px 18px 30px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Hero left + right sections */
+  div[style*="grid-template-columns"] > div {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* -----------------------------------------
+     HERO HEADING
+     ----------------------------------------- */
+
+  h1 {
+    font-size: clamp(42px, 12vw, 58px) !important;
+    line-height: 0.98 !important;
+    letter-spacing: -1.8px !important;
+    max-width: 100% !important;
+    word-break: normal !important;
+  }
+
+  /* Hero description */
+  h1 + p {
+    font-size: 15px !important;
+    line-height: 1.65 !important;
+    max-width: 100% !important;
+    margin-top: 18px !important;
+  }
+
+  /* -----------------------------------------
+     FEATURES
+     ----------------------------------------- */
+
+  /* 2 feature columns -> 1 column */
+  div[style*="grid-template-columns"] div[style*="repeat(2"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Feature text should not become too narrow */
+  div[style*="grid-template-columns"] div {
+    min-width: 0;
+  }
+
+  /* -----------------------------------------
+     RIGHT RIDE CARD
+     ----------------------------------------- */
+
+  /* Card stays inside phone width */
+  div[style*="rgba(10,20,39,0.58)"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 18px !important;
+    margin: 0 !important;
+  }
+
+  /* Ride card heading */
+  div[style*="rgba(10,20,39,0.58)"] div {
+    max-width: 100%;
+  }
+
+  /* -----------------------------------------
+     NAVBAR
+     ----------------------------------------- */
+
+  /* Navbar padding */
+  div[style*="padding: 25px 32px"] {
+    padding: 18px 18px !important;
+  }
+
+  /* Community badge */
+  div[style*="Student Community"] {
+    font-size: 9px !important;
+    padding: 6px 8px !important;
+  }
+
+  /* -----------------------------------------
+     CTA
+     ----------------------------------------- */
+
+  div[style*="padding: 10px 32px 28px"] {
+    padding: 5px 18px 25px !important;
+  }
+
+  /* Get Started button */
+  div[style*="padding: 10px 32px 28px"] .btn-primary {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 50px !important;
+  }
+
+  /* -----------------------------------------
+     REGISTER / OTP CARD
+     ----------------------------------------- */
+
+  /* Registration & OTP outer container */
+  div[style*="padding: 30px 20px"] {
+    padding: 18px 12px !important;
+  }
+
+  /* Register card */
+  div[style*="max-width: 540px"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 22px 17px !important;
+    border-radius: 20px !important;
+  }
+
+  /* OTP card */
+  div[style*="max-width: 500px"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 24px 17px !important;
+    border-radius: 20px !important;
+  }
+
+  /* -----------------------------------------
+     REGISTER HEADER
+     ----------------------------------------- */
+
+  div[style*="max-width: 540px"] h2 {
+    font-size: 22px !important;
+  }
+
+  div[style*="max-width: 540px"] h2 + p {
+    font-size: 11px !important;
+  }
+
+  /* -----------------------------------------
+     YEAR + PHONE
+     ----------------------------------------- */
+
+  /* Keep them side-by-side but fit phone */
+  div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* -----------------------------------------
+     OTP BOXES
+     ----------------------------------------- */
+
+  div[style*="justify-content: center"] input[id^="otp-"] {
+    width: 42px !important;
+    height: 50px !important;
+    font-size: 19px !important;
+  }
+
+  /* -----------------------------------------
+     OTP TITLE
+     ----------------------------------------- */
+
+  div[style*="max-width: 500px"] h2 {
+    font-size: 23px !important;
+  }
+}
+
+
+/* =========================================================
+   SMALL PHONES
+   ========================================================= */
+
+@media screen and (max-width: 380px) {
+
+  /* Smaller hero heading */
+  h1 {
+    font-size: 39px !important;
+    letter-spacing: -1.4px !important;
+  }
+
+  /* Smaller navbar */
+  div[style*="padding: 25px 32px"] {
+    padding: 15px 14px !important;
+  }
+
+  /* Ride card */
+  div[style*="rgba(10,20,39,0.58)"] {
+    padding: 15px !important;
+  }
+
+  /* Year + phone become single column */
+  div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* OTP */
+  div[style*="justify-content: center"] input[id^="otp-"] {
+    width: 38px !important;
+    height: 47px !important;
+  }
+}
+
+
+/* =========================================================
+   LANDSCAPE PHONE
+   ========================================================= */
+
+@media screen and (max-width: 768px) and (orientation: landscape) {
+
+  h1 {
+    font-size: 40px !important;
+  }
+
+  div[style*="grid-template-columns"] {
+    gap: 20px !important;
+  }
+}

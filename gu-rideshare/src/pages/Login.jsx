@@ -1,9 +1,24 @@
 import { useState } from 'react';
-import { Car, Shield, ArrowRight } from 'lucide-react';
+
+import {
+  Car,
+  Shield,
+  ArrowRight,
+  CheckCircle2,
+  Users,
+  Wallet,
+  Star,
+  MapPin,
+  Mail,
+  Phone,
+  GraduationCap,
+  User,
+  LockKeyhole,
+} from 'lucide-react';
+
 import api from '../api';
 
 export default function Login({ onLogin }) {
-  // welcome | register | otp
   const [step, setStep] = useState('welcome');
 
   const [form, setForm] = useState({
@@ -26,32 +41,36 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // ─────────────────────────────────────────────
-  // Features
-  // ─────────────────────────────────────────────
+  // =========================================================
+  // FEATURES
+  // =========================================================
 
   const features = [
     {
-      icon: '🚗',
-      text: 'Match with students on your route',
+      icon: <Users size={19} />,
+      title: 'Find your route',
+      text: 'Match with students heading your way',
     },
     {
-      icon: '💸',
-      text: 'Split cab fare, save money',
+      icon: <Wallet size={19} />,
+      title: 'Save money',
+      text: 'Split your cab fare with fellow students',
     },
     {
-      icon: '🔒',
-      text: 'Verified users only',
+      icon: <Shield size={19} />,
+      title: 'Verified community',
+      text: 'Connect with verified students',
     },
     {
-      icon: '⭐',
-      text: 'Ratings & reviews for safety',
+      icon: <Star size={19} />,
+      title: 'Ride with confidence',
+      text: 'Ratings and reviews for safer rides',
     },
   ];
 
-  // ─────────────────────────────────────────────
-  // Register / Send OTP
-  // ─────────────────────────────────────────────
+  // =========================================================
+  // REGISTER
+  // =========================================================
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -61,16 +80,15 @@ export default function Login({ onLogin }) {
 
     const email = form.email.trim().toLowerCase();
 
-    // Allow ANY valid email address
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address.');
-      return;
-    }
 
     if (!form.name.trim()) {
       setError('Please enter your full name.');
+      return;
+    }
+
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
       return;
     }
 
@@ -89,7 +107,7 @@ export default function Login({ onLogin }) {
     try {
       const response = await api.post('/auth/register', {
         name: form.name.trim(),
-        email: email,
+        email,
         year: form.year,
         phone: form.phone.trim(),
       });
@@ -98,17 +116,10 @@ export default function Login({ onLogin }) {
 
       setForm((prev) => ({
         ...prev,
-        email: email,
+        email,
       }));
 
-      setOtp([
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-      ]);
+      setOtp(['', '', '', '', '', '']);
 
       setSuccess(
         response.data?.message ||
@@ -129,23 +140,20 @@ export default function Login({ onLogin }) {
     }
   };
 
-  // ─────────────────────────────────────────────
-  // OTP Input
-  // ─────────────────────────────────────────────
+  // =========================================================
+  // OTP INPUT
+  // =========================================================
 
   const handleOtpChange = (index, value) => {
-    // Only one digit
     if (value && !/^\d$/.test(value)) {
       return;
     }
 
     const nextOtp = [...otp];
-
     nextOtp[index] = value;
 
     setOtp(nextOtp);
 
-    // Move to next box
     if (value && index < 5) {
       document
         .getElementById(`otp-${index + 1}`)
@@ -153,9 +161,9 @@ export default function Login({ onLogin }) {
     }
   };
 
-  // ─────────────────────────────────────────────
-  // Verify OTP
-  // ─────────────────────────────────────────────
+  // =========================================================
+  // VERIFY OTP
+  // =========================================================
 
   const handleVerify = async () => {
     setError('');
@@ -171,20 +179,13 @@ export default function Login({ onLogin }) {
     setLoading(true);
 
     try {
-      const response = await api.post(
-        '/auth/verify-otp',
-        {
-          email: form.email.trim().toLowerCase(),
-          otp: otpValue,
-        }
-      );
+      const response = await api.post('/auth/verify-otp', {
+        email: form.email.trim().toLowerCase(),
+        otp: otpValue,
+      });
 
-      console.log(
-        'VERIFY RESPONSE:',
-        response.data
-      );
+      console.log('VERIFY RESPONSE:', response.data);
 
-      // Save JWT
       if (response.data?.token) {
         localStorage.setItem(
           'token',
@@ -192,7 +193,6 @@ export default function Login({ onLogin }) {
         );
       }
 
-      // Save actual logged-in user
       if (response.data?.user) {
         localStorage.setItem(
           'user',
@@ -202,10 +202,10 @@ export default function Login({ onLogin }) {
 
       setSuccess('Login successful!');
 
-      // Pass actual user to App
       setTimeout(() => {
         onLogin(response.data?.user);
       }, 300);
+
     } catch (error) {
       console.error('VERIFY ERROR:', error);
 
@@ -219,9 +219,9 @@ export default function Login({ onLogin }) {
     }
   };
 
-  // ─────────────────────────────────────────────
-  // Resend OTP
-  // ─────────────────────────────────────────────
+  // =========================================================
+  // RESEND OTP
+  // =========================================================
 
   const handleResendOTP = async () => {
     setError('');
@@ -229,28 +229,17 @@ export default function Login({ onLogin }) {
     setLoading(true);
 
     try {
-      const response = await api.post(
-        '/auth/resend-otp',
-        {
-          email: form.email
-            .trim()
-            .toLowerCase(),
-        }
-      );
+      const response = await api.post('/auth/resend-otp', {
+        email: form.email.trim().toLowerCase(),
+      });
 
       setSuccess(
         response.data?.message ||
           'New OTP sent successfully.'
       );
 
-      setOtp([
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-      ]);
+      setOtp(['', '', '', '', '', '']);
+
     } catch (error) {
       console.error('RESEND ERROR:', error);
 
@@ -264,551 +253,1646 @@ export default function Login({ onLogin }) {
     }
   };
 
-  // ─────────────────────────────────────────────
-  // Welcome Page
-  // ─────────────────────────────────────────────
+  // =========================================================
+  // WELCOME PAGE
+  // =========================================================
 
   if (step === 'welcome') {
     return (
       <div
         style={{
           minHeight: '100dvh',
-          background: 'var(--bg)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
+          position: 'relative',
+          overflow: 'hidden',
+          background: '#050c1b',
+          color: '#fff',
         }}
       >
+
+        <img
+          src="/campus-bg.jpg"
+          alt="Galgotias University Campus"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            zIndex: 0,
+          }}
+        />
+
         <div
           style={{
-            padding: '60px 24px 30px',
+            position: 'fixed',
+            inset: 0,
+            background: `
+              linear-gradient(
+                90deg,
+                rgba(5,12,27,0.97) 0%,
+                rgba(5,12,27,0.90) 35%,
+                rgba(5,12,27,0.72) 65%,
+                rgba(5,12,27,0.55) 100%
+              ),
+              linear-gradient(
+                180deg,
+                rgba(5,12,27,0.45) 0%,
+                rgba(5,12,27,0.65) 70%,
+                rgba(5,12,27,0.96) 100%
+              )
+            `,
+            zIndex: 1,
+            pointerEvents: 'none',
+          }}
+        />
+
+        <div
+          style={{
+            position: 'fixed',
+            width: 420,
+            height: 420,
+            borderRadius: '50%',
+            background: 'rgba(255,111,0,0.10)',
+            filter: 'blur(100px)',
+            top: '-180px',
+            right: '-120px',
+            zIndex: 1,
+            pointerEvents: 'none',
+          }}
+        />
+
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 2,
+            minHeight: '100dvh',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
+
+          {/* NAVBAR */}
+
           <div
             style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '25px 32px',
               display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
-              gap: 10,
-              marginBottom: 50,
             }}
           >
-            <Car
-              size={28}
-              color="var(--accent)"
-            />
 
-            <span
+            <div
               style={{
-                fontFamily:
-                  'var(--font-display)',
-                fontWeight: 800,
-                fontSize: 20,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
               }}
             >
-              GU RideShare
-            </span>
+
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 11,
+                  background: 'rgba(255,111,0,0.16)',
+                  border:
+                    '1px solid rgba(255,111,0,0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                <Car
+                  size={22}
+                  color="var(--accent)"
+                />
+              </div>
+
+              <div>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 800,
+                    fontSize: 19,
+                  }}
+                >
+                  GU RideShare
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 10,
+                    color:
+                      'rgba(255,255,255,0.52)',
+                  }}
+                >
+                  Galgotias University
+                </div>
+              </div>
+
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '7px 11px',
+                borderRadius: 20,
+                background:
+                  'rgba(255,255,255,0.07)',
+                border:
+                  '1px solid rgba(255,255,255,0.13)',
+                color:
+                  'rgba(255,255,255,0.70)',
+                fontSize: 11,
+                backdropFilter: 'blur(12px)',
+              }}
+            >
+              <Shield size={13} />
+              Student Community
+            </div>
+
           </div>
 
-          <h1
-            style={{
-              fontFamily:
-                'var(--font-display)',
-              fontWeight: 800,
-              fontSize: 42,
-              lineHeight: 1.1,
-              letterSpacing: '-1px',
-              marginBottom: 14,
-            }}
-          >
-            Ride together,
-            <br />
-            <span
-              style={{
-                color: 'var(--accent)',
-              }}
-            >
-              save together.
-            </span>
-          </h1>
 
-          <p
-            style={{
-              color: 'var(--text2)',
-              fontSize: 15,
-              lineHeight: 1.6,
-            }}
-          >
-            Find students heading your way
-            and share your ride.
-          </p>
+          {/* HERO */}
 
           <div
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              marginTop: 35,
+              flex: 1,
+              width: '100%',
+              maxWidth: 1180,
+              margin: '0 auto',
+              padding: '45px 32px 35px',
+              boxSizing: 'border-box',
+              display: 'grid',
+              gridTemplateColumns:
+                'minmax(0, 1.1fr) minmax(320px, 0.7fr)',
+              gap: 60,
+              alignItems: 'center',
             }}
           >
-            {features.map((feature, index) => (
+
+            <div>
+
               <div
-                key={index}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 7,
+                  padding: '7px 12px',
+                  borderRadius: 20,
+                  background:
+                    'rgba(255,111,0,0.13)',
+                  border:
+                    '1px solid rgba(255,111,0,0.30)',
+                  color: '#ffad70',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  marginBottom: 18,
+                }}
+              >
+                <MapPin size={13} />
+                Built for GU students
+              </div>
+
+              <h1
+                style={{
+                  fontFamily:
+                    'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize:
+                    'clamp(42px, 6vw, 72px)',
+                  lineHeight: 1.02,
+                  letterSpacing: '-2.5px',
+                  margin: 0,
+                  maxWidth: 720,
+                }}
+              >
+                Ride together,
+                <br />
+
+                <span
+                  style={{
+                    color: 'var(--accent)',
+                  }}
+                >
+                  save together.
+                </span>
+              </h1>
+
+              <p
+                style={{
+                  color:
+                    'rgba(255,255,255,0.70)',
+                  fontSize: 16,
+                  lineHeight: 1.7,
+                  maxWidth: 570,
+                  margin: '20px 0 0',
+                }}
+              >
+                Find students heading your way,
+                share your ride and split the fare.
+                Your daily campus commute just got
+                easier.
+              </p>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns:
+                    'repeat(2, minmax(0, 1fr))',
+                  gap: 10,
+                  marginTop: 28,
+                  maxWidth: 650,
+                }}
+              >
+
+                {features.map(
+                  (feature, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 11,
+                        padding: '11px 12px',
+                        borderRadius: 12,
+                        background:
+                          'rgba(255,255,255,0.055)',
+                        border:
+                          '1px solid rgba(255,255,255,0.10)',
+                        backdropFilter:
+                          'blur(12px)',
+                      }}
+                    >
+
+                      <div
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 9,
+                          background:
+                            'rgba(255,111,0,0.13)',
+                          color:
+                            'var(--accent)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {feature.icon}
+                      </div>
+
+                      <div>
+                        <div
+                          style={{
+                            color: '#fff',
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {feature.title}
+                        </div>
+
+                        <div
+                          style={{
+                            color:
+                              'rgba(255,255,255,0.50)',
+                            fontSize: 10,
+                            marginTop: 2,
+                          }}
+                        >
+                          {feature.text}
+                        </div>
+                      </div>
+
+                    </div>
+                  )
+                )}
+
+              </div>
+
+            </div>
+
+
+            {/* RIGHT CARD */}
+
+            <div
+              style={{
+                background:
+                  'rgba(10,20,39,0.58)',
+                border:
+                  '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 24,
+                padding: 22,
+                boxShadow:
+                  '0 25px 70px rgba(0,0,0,0.35)',
+                backdropFilter: 'blur(18px)',
+              }}
+            >
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent:
+                    'space-between',
+                  alignItems: 'center',
+                  marginBottom: 20,
+                }}
+              >
+
+                <div>
+                  <div
+                    style={{
+                      color:
+                        'rgba(255,255,255,0.55)',
+                      fontSize: 10,
+                      textTransform:
+                        'uppercase',
+                      letterSpacing: 1,
+                    }}
+                  >
+                    Campus rides
+                  </div>
+
+                  <div
+                    style={{
+                      color: '#fff',
+                      fontSize: 20,
+                      fontWeight: 700,
+                      fontFamily:
+                        'var(--font-display)',
+                      marginTop: 5,
+                    }}
+                  >
+                    Find your ride
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 11,
+                    background:
+                      'rgba(255,111,0,0.14)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color:
+                      'var(--accent)',
+                  }}
+                >
+                  <Car size={19} />
+                </div>
+
+              </div>
+
+              <div
+                style={{
+                  background:
+                    'rgba(255,255,255,0.06)',
+                  border:
+                    '1px solid rgba(255,255,255,0.10)',
+                  borderRadius: 13,
+                  padding: 13,
+                  marginBottom: 9,
+                }}
+              >
+                <div
+                  style={{
+                    color:
+                      'rgba(255,255,255,0.40)',
+                    fontSize: 10,
+                    marginBottom: 5,
+                  }}
+                >
+                  FROM
+                </div>
+
+                <div
+                  style={{
+                    color: '#fff',
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  Galgotias University
+                </div>
+              </div>
+
+              <div
+                style={{
+                  background:
+                    'rgba(255,255,255,0.06)',
+                  border:
+                    '1px solid rgba(255,255,255,0.10)',
+                  borderRadius: 13,
+                  padding: 13,
+                }}
+              >
+                <div
+                  style={{
+                    color:
+                      'rgba(255,255,255,0.40)',
+                    fontSize: 10,
+                    marginBottom: 5,
+                  }}
+                >
+                  DESTINATION
+                </div>
+
+                <div
+                  style={{
+                    color: '#fff',
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  Noida Sector 18
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: 15,
+                  padding: 13,
+                  borderRadius: 13,
+                  background:
+                    'rgba(255,111,0,0.09)',
+                  border:
+                    '1px solid rgba(255,111,0,0.20)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent:
+                      'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        color:
+                          'rgba(255,255,255,0.50)',
+                        fontSize: 10,
+                      }}
+                    >
+                      Example ride
+                    </div>
+
+                    <div
+                      style={{
+                        color: '#fff',
+                        fontWeight: 700,
+                        fontSize: 13,
+                        marginTop: 4,
+                      }}
+                    >
+                      Today · 6:30 PM
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      color:
+                        'var(--accent)',
+                      fontWeight: 800,
+                      fontSize: 18,
+                    }}
+                  >
+                    ₹80
+                  </div>
+                </div>
+              </div>
+
+              <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 12,
+                  justifyContent: 'center',
+                  gap: 6,
+                  color:
+                    'rgba(255,255,255,0.48)',
+                  fontSize: 10,
+                  marginTop: 17,
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 20,
-                  }}
-                >
-                  {feature.icon}
-                </span>
-
-                <span
-                  style={{
-                    color: 'var(--text2)',
-                    fontSize: 14,
-                  }}
-                >
-                  {feature.text}
-                </span>
+                <CheckCircle2
+                  size={13}
+                  color="#4ade80"
+                />
+                Verified student rides
               </div>
-            ))}
+
+            </div>
+
           </div>
-        </div>
 
-        <div
-          style={{
-            padding: '0 24px 40px',
-          }}
-        >
-          <button
-            className="btn-primary"
-            onClick={() => {
-              setError('');
-              setSuccess('');
-              setStep('register');
-            }}
+
+          {/* CTA */}
+
+          <div
             style={{
+              padding:
+                '10px 32px 28px',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
             }}
           >
-            Get Started
-            <ArrowRight size={16} />
-          </button>
 
-          <p
-            style={{
-              textAlign: 'center',
-              color: 'var(--text3)',
-              fontSize: 12,
-              marginTop: 14,
-            }}
-          >
-            Login with any valid email address
-          </p>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                setError('');
+                setSuccess('');
+                setStep('register');
+              }}
+              style={{
+                width: '100%',
+                maxWidth: 560,
+                height: 52,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                fontSize: 14,
+                fontWeight: 700,
+              }}
+            >
+              Get Started
+              <ArrowRight size={17} />
+            </button>
+
+            <p
+              style={{
+                textAlign: 'center',
+                color:
+                  'rgba(255,255,255,0.42)',
+                fontSize: 11,
+                margin: '11px 0 0',
+              }}
+            >
+              Login with any valid email address
+            </p>
+
+          </div>
+
         </div>
       </div>
     );
   }
 
-  // ─────────────────────────────────────────────
-  // Register Page
-  // ─────────────────────────────────────────────
+
+  // =========================================================
+  // REGISTER / CREDENTIAL SCREEN
+  // =========================================================
 
   if (step === 'register') {
     return (
       <div
         style={{
           minHeight: '100dvh',
-          background: 'var(--bg)',
-          padding: '40px 24px',
+          position: 'relative',
+          overflow: 'hidden',
+          background: '#050c1b',
+          color: '#fff',
         }}
       >
-        <button
-          className="btn-ghost"
-          onClick={() => {
-            setError('');
-            setSuccess('');
-            setStep('welcome');
-          }}
+
+        {/* BACKGROUND */}
+
+        <img
+          src="/campus-bg.jpg"
+          alt="Galgotias University Campus"
           style={{
-            marginBottom: 28,
-            color: 'var(--text2)',
+            position: 'fixed',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            opacity: 0.32,
+            zIndex: 0,
+          }}
+        />
+
+        {/* OVERLAY */}
+
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background:
+              'linear-gradient(135deg, rgba(5,12,27,0.97), rgba(5,12,27,0.82), rgba(5,12,27,0.97))',
+            zIndex: 1,
+          }}
+        />
+
+        {/* GLOW */}
+
+        <div
+          style={{
+            position: 'fixed',
+            width: 380,
+            height: 380,
+            borderRadius: '50%',
+            background:
+              'rgba(255,111,0,0.11)',
+            filter: 'blur(100px)',
+            top: '-180px',
+            right: '-100px',
+            zIndex: 1,
+          }}
+        />
+
+        {/* CONTENT */}
+
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 2,
+            minHeight: '100dvh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '30px 20px',
+            boxSizing: 'border-box',
           }}
         >
-          ← Back
-        </button>
 
-        <h2
-          style={{
-            fontFamily:
-              'var(--font-display)',
-            fontWeight: 800,
-            fontSize: 28,
-            marginBottom: 6,
-          }}
-        >
-          Create account
-        </h2>
-
-        <p
-          style={{
-            color: 'var(--text2)',
-            fontSize: 13,
-            marginBottom: 28,
-          }}
-        >
-          Enter your email to receive a
-          verification OTP
-        </p>
-
-        {error && (
-          <div
-            style={{
-              background: '#451a1a',
-              border: '1px solid #dc2626',
-              color: '#fca5a5',
-              padding: '12px 14px',
-              borderRadius: 10,
-              marginBottom: 20,
-              fontSize: 13,
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div
-            style={{
-              background: '#123524',
-              border: '1px solid #16a34a',
-              color: '#86efac',
-              padding: '12px 14px',
-              borderRadius: 10,
-              marginBottom: 20,
-              fontSize: 13,
-            }}
-          >
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleRegister}>
-          <div className="input-group">
-            <label>Full Name</label>
-
-            <input
-              className="input-field"
-              placeholder="e.g. Suryansh Yadav"
-              value={form.name}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  name: e.target.value,
-                })
-              }
-              required
-            />
-          </div>
-
-          <div className="input-group">
-            <label>Email Address</label>
-
-            <input
-              className="input-field"
-              type="email"
-              placeholder="example@gmail.com"
-              value={form.email}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  email: e.target.value,
-                })
-              }
-              required
-            />
-          </div>
+          {/* CARD */}
 
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns:
-                '1fr 1fr',
-              gap: 12,
-            }}
-          >
-            <div className="input-group">
-              <label>Year</label>
-
-              <select
-                className="input-field"
-                value={form.year}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    year: e.target.value,
-                  })
-                }
-                required
-              >
-                <option value="">
-                  Select
-                </option>
-
-                <option>1st Year</option>
-                <option>2nd Year</option>
-                <option>3rd Year</option>
-                <option>4th Year</option>
-              </select>
-            </div>
-
-            <div className="input-group">
-              <label>Phone</label>
-
-              <input
-                className="input-field"
-                type="tel"
-                placeholder="+91 98765..."
-                value={form.phone}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    phone: e.target.value,
-                  })
-                }
-                required
-              />
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: 'var(--surface)',
+              width: '100%',
+              maxWidth: 540,
+              background:
+                'rgba(10,20,39,0.80)',
               border:
-                '1px solid var(--border)',
-              borderRadius: 10,
-              padding: '12px 14px',
-              marginBottom: 20,
-              display: 'flex',
-              gap: 10,
-              alignItems: 'center',
+                '1px solid rgba(255,255,255,0.14)',
+              borderRadius: 24,
+              padding: '30px',
+              boxSizing: 'border-box',
+              backdropFilter: 'blur(22px)',
+              WebkitBackdropFilter: 'blur(22px)',
+              boxShadow:
+                '0 25px 80px rgba(0,0,0,0.45)',
             }}
           >
-            <Shield
-              size={16}
-              color="var(--teal)"
-              style={{
-                flexShrink: 0,
-              }}
-            />
 
-            <span
+            {/* BACK */}
+
+            <button
+              onClick={() => {
+                setError('');
+                setSuccess('');
+                setStep('welcome');
+              }}
               style={{
-                fontSize: 12,
-                color: 'var(--text2)',
+                background: 'none',
+                border: 'none',
+                color:
+                  'rgba(255,255,255,0.58)',
+                cursor: 'pointer',
+                fontSize: 13,
+                padding: 0,
+                marginBottom: 25,
               }}
             >
-              Your email will be verified
-              using a one-time OTP.
-            </span>
+              ← Back to home
+            </button>
+
+
+            {/* HEADER */}
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 13,
+                marginBottom: 22,
+              }}
+            >
+
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 14,
+                  background:
+                    'rgba(255,111,0,0.14)',
+                  border:
+                    '1px solid rgba(255,111,0,0.30)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--accent)',
+                }}
+              >
+                <Car size={23} />
+              </div>
+
+              <div>
+                <h2
+                  style={{
+                    fontFamily:
+                      'var(--font-display)',
+                    fontSize: 27,
+                    fontWeight: 800,
+                    margin: 0,
+                    letterSpacing: '-0.7px',
+                  }}
+                >
+                  Create your account
+                </h2>
+
+                <p
+                  style={{
+                    color:
+                      'rgba(255,255,255,0.52)',
+                    fontSize: 12,
+                    margin: '5px 0 0',
+                  }}
+                >
+                  Join the GU RideShare community
+                </p>
+              </div>
+
+            </div>
+
+
+            {/* PROGRESS */}
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 25,
+              }}
+            >
+
+              <div
+                style={{
+                  height: 4,
+                  flex: 1,
+                  borderRadius: 10,
+                  background:
+                    'var(--accent)',
+                }}
+              />
+
+              <div
+                style={{
+                  height: 4,
+                  flex: 1,
+                  borderRadius: 10,
+                  background:
+                    'rgba(255,255,255,0.10)',
+                }}
+              />
+
+              <span
+                style={{
+                  fontSize: 10,
+                  color:
+                    'rgba(255,255,255,0.45)',
+                  marginLeft: 3,
+                }}
+              >
+                1 of 2
+              </span>
+
+            </div>
+
+
+            {/* ERROR */}
+
+            {error && (
+              <div
+                style={{
+                  background:
+                    'rgba(220,38,38,0.12)',
+                  border:
+                    '1px solid rgba(220,38,38,0.35)',
+                  color: '#fca5a5',
+                  padding: '11px 13px',
+                  borderRadius: 10,
+                  marginBottom: 17,
+                  fontSize: 12,
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+
+            {/* SUCCESS */}
+
+            {success && (
+              <div
+                style={{
+                  background:
+                    'rgba(22,163,74,0.12)',
+                  border:
+                    '1px solid rgba(22,163,74,0.35)',
+                  color: '#86efac',
+                  padding: '11px 13px',
+                  borderRadius: 10,
+                  marginBottom: 17,
+                  fontSize: 12,
+                }}
+              >
+                {success}
+              </div>
+            )}
+
+
+            <form onSubmit={handleRegister}>
+
+              {/* FULL NAME */}
+
+              <div className="input-group">
+
+                <label>FULL NAME</label>
+
+                <div
+                  style={{
+                    position: 'relative',
+                  }}
+                >
+                  <User
+                    size={16}
+                    style={{
+                      position: 'absolute',
+                      left: 13,
+                      top: '50%',
+                      transform:
+                        'translateY(-50%)',
+                      color:
+                        'rgba(255,255,255,0.38)',
+                      pointerEvents: 'none',
+                    }}
+                  />
+
+                  <input
+                    className="input-field"
+                    placeholder="Enter your full name"
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        name: e.target.value,
+                      })
+                    }
+                    required
+                    style={{
+                      paddingLeft: 40,
+                      background:
+                        'rgba(255,255,255,0.055)',
+                      borderColor:
+                        'rgba(255,255,255,0.12)',
+                    }}
+                  />
+                </div>
+
+              </div>
+
+
+              {/* EMAIL */}
+
+              <div className="input-group">
+
+                <label>EMAIL ADDRESS</label>
+
+                <div
+                  style={{
+                    position: 'relative',
+                  }}
+                >
+                  <Mail
+                    size={16}
+                    style={{
+                      position: 'absolute',
+                      left: 13,
+                      top: '50%',
+                      transform:
+                        'translateY(-50%)',
+                      color:
+                        'rgba(255,255,255,0.38)',
+                      pointerEvents: 'none',
+                    }}
+                  />
+
+                  <input
+                    className="input-field"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        email: e.target.value,
+                      })
+                    }
+                    required
+                    style={{
+                      paddingLeft: 40,
+                      background:
+                        'rgba(255,255,255,0.055)',
+                      borderColor:
+                        'rgba(255,255,255,0.12)',
+                    }}
+                  />
+                </div>
+
+                <small
+                  style={{
+                    color:
+                      'rgba(255,255,255,0.38)',
+                    fontSize: 10,
+                    marginTop: 5,
+                    display: 'block',
+                  }}
+                >
+                  A verification OTP will be sent to this email.
+                </small>
+
+              </div>
+
+
+              {/* YEAR + PHONE */}
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns:
+                    '1fr 1fr',
+                  gap: 12,
+                }}
+              >
+
+                {/* YEAR */}
+
+                <div className="input-group">
+
+                  <label>YEAR</label>
+
+                  <div
+                    style={{
+                      position: 'relative',
+                    }}
+                  >
+                    <GraduationCap
+                      size={16}
+                      style={{
+                        position:
+                          'absolute',
+                        left: 13,
+                        top: '50%',
+                        transform:
+                          'translateY(-50%)',
+                        color:
+                          'rgba(255,255,255,0.38)',
+                        pointerEvents:
+                          'none',
+                      }}
+                    />
+
+                    <select
+                      className="input-field"
+                      value={form.year}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          year: e.target.value,
+                        })
+                      }
+                      required
+                      style={{
+                        paddingLeft: 40,
+                        background:
+                          'rgba(255,255,255,0.055)',
+                        borderColor:
+                          'rgba(255,255,255,0.12)',
+                      }}
+                    >
+                      <option value="">
+                        Select year
+                      </option>
+
+                      <option>
+                        1st Year
+                      </option>
+
+                      <option>
+                        2nd Year
+                      </option>
+
+                      <option>
+                        3rd Year
+                      </option>
+
+                      <option>
+                        4th Year
+                      </option>
+                    </select>
+
+                  </div>
+
+                </div>
+
+
+                {/* PHONE */}
+
+                <div className="input-group">
+
+                  <label>PHONE NUMBER</label>
+
+                  <div
+                    style={{
+                      position: 'relative',
+                    }}
+                  >
+                    <Phone
+                      size={16}
+                      style={{
+                        position:
+                          'absolute',
+                        left: 13,
+                        top: '50%',
+                        transform:
+                          'translateY(-50%)',
+                        color:
+                          'rgba(255,255,255,0.38)',
+                        pointerEvents:
+                          'none',
+                      }}
+                    />
+
+                    <input
+                      className="input-field"
+                      type="tel"
+                      placeholder="+91 98765..."
+                      value={form.phone}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          phone: e.target.value,
+                        })
+                      }
+                      required
+                      style={{
+                        paddingLeft: 40,
+                        background:
+                          'rgba(255,255,255,0.055)',
+                        borderColor:
+                          'rgba(255,255,255,0.12)',
+                      }}
+                    />
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              {/* SECURITY */}
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '12px 13px',
+                  marginTop: 5,
+                  marginBottom: 20,
+                  borderRadius: 12,
+                  background:
+                    'rgba(34,197,94,0.07)',
+                  border:
+                    '1px solid rgba(34,197,94,0.16)',
+                }}
+              >
+
+                <Shield
+                  size={17}
+                  color="#4ade80"
+                  style={{
+                    flexShrink: 0,
+                  }}
+                />
+
+                <div>
+
+                  <div
+                    style={{
+                      color: '#d1fae5',
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Your information is secure
+                  </div>
+
+                  <div
+                    style={{
+                      color:
+                        'rgba(255,255,255,0.40)',
+                      fontSize: 10,
+                      marginTop: 2,
+                    }}
+                  >
+                    We'll verify your email using a one-time OTP.
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              {/* BUTTON */}
+
+              <button
+                className="btn-primary"
+                type="submit"
+                disabled={loading}
+                style={{
+                  height: 50,
+                  fontSize: 13,
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  boxShadow:
+                    '0 10px 30px rgba(255,111,0,0.20)',
+                }}
+              >
+                {loading ? (
+                  'Sending OTP...'
+                ) : (
+                  <>
+                    Continue to verification
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+
+
+              <p
+                style={{
+                  textAlign: 'center',
+                  color:
+                    'rgba(255,255,255,0.35)',
+                  fontSize: 10,
+                  margin: '15px 0 0',
+                }}
+              >
+                Your email will only be used for account verification.
+              </p>
+
+            </form>
+
           </div>
 
-          <button
-            className="btn-primary"
-            type="submit"
-            disabled={loading}
-          >
-            {loading
-              ? 'Sending OTP...'
-              : 'Send Verification OTP'}
-          </button>
-        </form>
+        </div>
+
       </div>
     );
   }
 
-  // ─────────────────────────────────────────────
-  // OTP Page
-  // ─────────────────────────────────────────────
+
+  // =========================================================
+  // OTP VERIFICATION
+  // =========================================================
 
   if (step === 'otp') {
     return (
       <div
         style={{
           minHeight: '100dvh',
-          background: 'var(--bg)',
-          padding: '40px 24px',
+          position: 'relative',
+          overflow: 'hidden',
+          background: '#050c1b',
+          color: '#fff',
         }}
       >
-        <button
-          className="btn-ghost"
-          onClick={() => {
-            setError('');
-            setSuccess('');
-            setStep('register');
-          }}
+
+        {/* BACKGROUND */}
+
+        <img
+          src="/campus-bg.jpg"
+          alt="Campus"
           style={{
-            marginBottom: 28,
-            color: 'var(--text2)',
+            position: 'fixed',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            opacity: 0.28,
+            zIndex: 0,
           }}
-        >
-          ← Back
-        </button>
+        />
 
-        <h2
-          style={{
-            fontFamily:
-              'var(--font-display)',
-            fontWeight: 800,
-            fontSize: 28,
-            marginBottom: 6,
-          }}
-        >
-          Verify your email
-        </h2>
-
-        <p
-          style={{
-            color: 'var(--text2)',
-            fontSize: 13,
-            marginBottom: 32,
-          }}
-        >
-          OTP sent to{' '}
-          <strong
-            style={{
-              color: 'var(--text)',
-            }}
-          >
-            {form.email}
-          </strong>
-        </p>
-
-        {error && (
-          <div
-            style={{
-              background: '#451a1a',
-              border: '1px solid #dc2626',
-              color: '#fca5a5',
-              padding: '12px 14px',
-              borderRadius: 10,
-              marginBottom: 20,
-              fontSize: 13,
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div
-            style={{
-              background: '#123524',
-              border: '1px solid #16a34a',
-              color: '#86efac',
-              padding: '12px 14px',
-              borderRadius: 10,
-              marginBottom: 20,
-              fontSize: 13,
-            }}
-          >
-            {success}
-          </div>
-        )}
+        {/* OVERLAY */}
 
         <div
           style={{
+            position: 'fixed',
+            inset: 0,
+            background:
+              'linear-gradient(135deg, rgba(5,12,27,0.97), rgba(5,12,27,0.84), rgba(5,12,27,0.97))',
+            zIndex: 1,
+          }}
+        />
+
+        {/* GLOW */}
+
+        <div
+          style={{
+            position: 'fixed',
+            width: 350,
+            height: 350,
+            borderRadius: '50%',
+            background:
+              'rgba(255,111,0,0.10)',
+            filter: 'blur(100px)',
+            top: '-160px',
+            right: '-100px',
+            zIndex: 1,
+          }}
+        />
+
+
+        {/* CONTENT */}
+
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 2,
+            minHeight: '100dvh',
             display: 'flex',
-            gap: 10,
-            marginBottom: 32,
+            alignItems: 'center',
             justifyContent: 'center',
+            padding: '30px 20px',
+            boxSizing: 'border-box',
           }}
         >
-          {otp.map((digit, index) => (
-            <input
-              key={index}
-              id={`otp-${index}`}
-              maxLength={1}
-              inputMode="numeric"
-              value={digit}
-              onChange={(e) =>
-                handleOtpChange(
-                  index,
-                  e.target.value
-                )
-              }
-              style={{
-                width: 46,
-                height: 56,
-                textAlign: 'center',
-                fontSize: 22,
-                fontFamily:
-                  'var(--font-display)',
-                fontWeight: 700,
-                background: digit
-                  ? 'var(--surface2)'
-                  : 'var(--surface)',
-                border: `1px solid ${
-                  digit
-                    ? 'var(--accent)'
-                    : 'var(--border)'
-                }`,
-                borderRadius: 10,
-                color: 'var(--text)',
-                outline: 'none',
-              }}
-            />
-          ))}
-        </div>
 
-        <button
-          className="btn-primary"
-          onClick={handleVerify}
-          disabled={
-            loading ||
-            otp.join('').length !== 6
-          }
-          style={{
-            marginBottom: 16,
-          }}
-        >
-          {loading
-            ? 'Verifying...'
-            : 'Verify & Enter App'}
-        </button>
+          {/* CARD */}
 
-        <p
-          style={{
-            textAlign: 'center',
-            color: 'var(--text3)',
-            fontSize: 13,
-          }}
-        >
-          Didn't get it?{' '}
-          <span
-            onClick={
-              loading
-                ? undefined
-                : handleResendOTP
-            }
+          <div
             style={{
-              color: 'var(--accent)',
-              cursor: loading
-                ? 'default'
-                : 'pointer',
+              width: '100%',
+              maxWidth: 500,
+              background:
+                'rgba(10,20,39,0.82)',
+              border:
+                '1px solid rgba(255,255,255,0.14)',
+              borderRadius: 24,
+              padding: '32px 30px',
+              boxSizing: 'border-box',
+              backdropFilter: 'blur(22px)',
+              WebkitBackdropFilter: 'blur(22px)',
+              boxShadow:
+                '0 25px 80px rgba(0,0,0,0.45)',
+              textAlign: 'center',
             }}
           >
-            Resend OTP
-          </span>
-        </p>
+
+            {/* BACK */}
+
+            <button
+              onClick={() => {
+                setError('');
+                setSuccess('');
+                setStep('register');
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color:
+                  'rgba(255,255,255,0.55)',
+                cursor: 'pointer',
+                fontSize: 13,
+                padding: 0,
+                display: 'block',
+                marginBottom: 24,
+              }}
+            >
+              ← Back
+            </button>
+
+
+            {/* ICON */}
+
+            <div
+              style={{
+                width: 58,
+                height: 58,
+                margin: '0 auto 17px',
+                borderRadius: 17,
+                background:
+                  'rgba(255,111,0,0.14)',
+                border:
+                  '1px solid rgba(255,111,0,0.30)',
+                color: 'var(--accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <LockKeyhole size={25} />
+            </div>
+
+
+            {/* TITLE */}
+
+            <h2
+              style={{
+                fontFamily:
+                  'var(--font-display)',
+                fontWeight: 800,
+                fontSize: 28,
+                margin: 0,
+                letterSpacing: '-0.7px',
+              }}
+            >
+              Verify your email
+            </h2>
+
+
+            <p
+              style={{
+                color:
+                  'rgba(255,255,255,0.52)',
+                fontSize: 12,
+                lineHeight: 1.6,
+                margin:
+                  '9px auto 5px',
+                maxWidth: 360,
+              }}
+            >
+              We've sent a 6-digit verification
+              code to
+            </p>
+
+
+            <div
+              style={{
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: 13,
+                wordBreak: 'break-word',
+              }}
+            >
+              {form.email}
+            </div>
+
+
+            {/* PROGRESS */}
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                margin:
+                  '24px 0 25px',
+              }}
+            >
+
+              <div
+                style={{
+                  height: 4,
+                  flex: 1,
+                  borderRadius: 10,
+                  background:
+                    'var(--accent)',
+                }}
+              />
+
+              <div
+                style={{
+                  height: 4,
+                  flex: 1,
+                  borderRadius: 10,
+                  background:
+                    'var(--accent)',
+                }}
+              />
+
+              <span
+                style={{
+                  fontSize: 10,
+                  color:
+                    'rgba(255,255,255,0.45)',
+                  marginLeft: 3,
+                }}
+              >
+                2 of 2
+              </span>
+
+            </div>
+
+
+            {/* ERROR */}
+
+            {error && (
+              <div
+                style={{
+                  textAlign: 'left',
+                  background:
+                    'rgba(220,38,38,0.12)',
+                  border:
+                    '1px solid rgba(220,38,38,0.35)',
+                  color: '#fca5a5',
+                  padding: '11px 13px',
+                  borderRadius: 10,
+                  marginBottom: 17,
+                  fontSize: 12,
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+
+            {/* SUCCESS */}
+
+            {success && (
+              <div
+                style={{
+                  textAlign: 'left',
+                  background:
+                    'rgba(22,163,74,0.12)',
+                  border:
+                    '1px solid rgba(22,163,74,0.35)',
+                  color: '#86efac',
+                  padding: '11px 13px',
+                  borderRadius: 10,
+                  marginBottom: 17,
+                  fontSize: 12,
+                }}
+              >
+                {success}
+              </div>
+            )}
+
+
+            {/* OTP BOXES */}
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 9,
+                margin:
+                  '24px 0 25px',
+              }}
+            >
+
+              {otp.map((digit, index) => (
+
+                <input
+                  key={index}
+                  id={`otp-${index}`}
+                  maxLength={1}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={digit}
+                  onChange={(e) =>
+                    handleOtpChange(
+                      index,
+                      e.target.value
+                    )
+                  }
+                  style={{
+                    width: 48,
+                    height: 56,
+                    boxSizing: 'border-box',
+                    textAlign: 'center',
+                    fontSize: 21,
+                    fontFamily:
+                      'var(--font-display)',
+                    fontWeight: 700,
+                    background:
+                      digit
+                        ? 'rgba(255,111,0,0.09)'
+                        : 'rgba(255,255,255,0.055)',
+                    border:
+                      digit
+                        ? '1px solid var(--accent)'
+                        : '1px solid rgba(255,255,255,0.13)',
+                    borderRadius: 11,
+                    color: '#fff',
+                    outline: 'none',
+                  }}
+                />
+
+              ))}
+
+            </div>
+
+
+            {/* VERIFY */}
+
+            <button
+              className="btn-primary"
+              onClick={handleVerify}
+              disabled={
+                loading ||
+                otp.join('').length !== 6
+              }
+              style={{
+                height: 50,
+                borderRadius: 12,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                fontSize: 13,
+              }}
+            >
+              {loading ? (
+                'Verifying...'
+              ) : (
+                <>
+                  Verify & Enter App
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+
+
+            {/* RESEND */}
+
+            <div
+              style={{
+                marginTop: 18,
+                fontSize: 12,
+                color:
+                  'rgba(255,255,255,0.42)',
+              }}
+            >
+              Didn't receive the code?{' '}
+
+              <span
+                onClick={
+                  loading
+                    ? undefined
+                    : handleResendOTP
+                }
+                style={{
+                  color: 'var(--accent)',
+                  cursor: loading
+                    ? 'default'
+                    : 'pointer',
+                  fontWeight: 700,
+                }}
+              >
+                Resend OTP
+              </span>
+            </div>
+
+
+            {/* SECURITY */}
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 20,
+                color:
+                  'rgba(255,255,255,0.35)',
+                fontSize: 10,
+              }}
+            >
+              <Shield size={12} />
+              Secure email verification
+            </div>
+
+          </div>
+
+        </div>
+
       </div>
     );
   }
